@@ -1,13 +1,25 @@
 import Head from "next/head";
 import { useRouter } from "next/router";
 import Link from "next/link";
-
+import UserContext from "../src/context/user/user.context";
 import { useForm } from "react-hook-form";
-import { Button, TextField, Typography } from "@mui/material";
+import { Button, TextField, Typography,  Card } from "@mui/material";
+import { useContext, useEffect, useMemo, useState } from "react";
+import Table from "../src/components/Table/table";
+import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import BorderColorTwoToneIcon from "@mui/icons-material/BorderColorTwoTone";
+import Modal from "../src/components/Modal/modal"
 
 export default function Home() {
-  const router = useRouter();
-  const { id } = router.query;
+  const { user, status, readUser, updateUser, deleteUser, addUser } =
+    useContext(UserContext);
+  const [openModal, setOpenModal] = useState(false);
+  const [userSelected, setUserSelected] = useState({
+    name: "",
+    lastName: "",
+    gender: "",
+  });
+
   const {
     register,
     handleSubmit,
@@ -15,18 +27,95 @@ export default function Home() {
     formState: { errors },
   } = useForm();
 
+  const handleClose = () => setOpenModal(false);
+
   const generatorId = () => {
     return Math.random().toString("36").split(".")[1].substring(0, 8);
   };
 
-  const addUser = (data) => {
+  const adduser = (data) => {
     let id = generatorId();
-    const user = {
+    const newUser = {
       id,
       ...data,
     };
-    console.log("user", user);
+
+    addUser(newUser);
   };
+
+  const selectUserUpdate = (id) => {
+    console.log("id", id);
+    const result = user.find((ele) => ele.id === id);
+    setUserSelected(result);
+    console.log("finaly", userSelected);
+    setOpenModal(!openModal);
+  };
+  const selectUserdelete = (id) => {
+    deleteUser(id);
+    console.log(id);
+  };
+   const validationUpdate =(data)=>{
+     console.log(data)
+    const result = Object.entries(data).some(([key,value])=>{
+      return userSelected[key] !== value 
+    })
+  if(result){
+   updateUser(userSelected.id, data)
+   setOpenModal(!openModal)
+  }
+  else{alert("Make any changes" )}
+  
+   }
+
+  const data = useMemo(() => user, [user]);
+
+  const columns = useMemo(() => [
+    {
+      Header: "Name",
+      accessor: "name",
+    },
+    {
+      Header: "Last name",
+      accessor: "lastName",
+    },
+    {
+      Header: "Gender",
+      accessor: "gender",
+    },
+    {
+      Header: "Action",
+      Cell: (props) => {
+        return (
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "row",
+              justifyContent: "space-between",
+            }}
+          >
+            <div>
+              <DeleteOutlineIcon
+                onClick={() => selectUserdelete(props.row.original.id)}
+                style={{ cursor: "pointer", padding: 3 }}
+              />
+            </div>
+            <div>
+              <BorderColorTwoToneIcon
+                onClick={() => selectUserUpdate(props.row.original.id)}
+                style={{ cursor: "pointer", padding: 3 }}
+              />
+            </div>
+          </div>
+        );
+      },
+    },
+  ]);
+
+  useEffect(() => {
+    readUser();
+    console.log("userState", status, user);
+    
+  }, [!status]);
 
   return (
     <div
@@ -35,24 +124,36 @@ export default function Home() {
         flexDirection: "row",
         justifyContent: "center",
         width: "100%",
-        height: "97vh",
+        height: "100vh",
         gap: "20px",
+        background: "#f0f8ff",
+        alignItems: "center",
       }}
     >
-      <div
-        style={{ width: "35%", background: "#4d56", flexDirection: "column" }}
+      <Card
+        style={{
+          width: "30%",
+          display: "flex",
+          flexDirection: "column",
+          gap: "10px",
+          margin: "20px",
+          alignItems: "center",
+          justifyContent: "center",
+          height: "80vh",
+        }}
       >
         <form
           style={{
-            width: "80%",
+            width: "100%",
             display: "flex",
             flexDirection: "column",
             gap: "10px",
-            margin: "20px",
+            marginTop: "20px",
             alignItems: "center",
+
             height: "80vh",
           }}
-          onSubmit={handleSubmit(addUser)}
+          onSubmit={handleSubmit(adduser)}
         >
           <Typography>Add Users</Typography>
           <TextField
@@ -64,7 +165,7 @@ export default function Home() {
           <TextField
             variant="outlined"
             label="Last name"
-            error={errors.lastName ? true : false }
+            error={errors.lastName ? true : false}
             type="text"
             {...register("lastName", { required: true })}
           />
@@ -74,199 +175,108 @@ export default function Home() {
             type="text"
             {...register("gender", { required: true })}
           />
+
           <Button type="submit" variant="contained">
             Save
           </Button>
         </form>
-      </div>
-      <div style={{ width: "60%", background: "#4d56" }}></div>
+      </Card>
+
+      <Card
+        style={{
+          width: "60%",
+          display: "flex",
+          alignItems: "center",
+          flexDirection: "column",
+          gap: "10px",
+          height: "80vh",
+        }}
+      >
+        <Typography>Users list</Typography>
+        <div style={{ padding: "10px", width: "80%" }}>
+          <Table columns={columns} data={data} />
+        </div>
+      </Card>
+      {/* </div> */}
+
+<Modal open={openModal}
+close={handleClose}
+defaulName={userSelected.name} 
+defaultLastName={userSelected.lastName}
+defaultGender={userSelected.gender}
+validation={validationUpdate}
+/>
+      {/* <Modal
+        open={openModal}
+        onClose={handleClose}
+        aria-labelledby="modal-modal-title"
+        aria-describedby="modal-modal-description"
+      >
+        <Box
+          sx={{
+            position: "absolute",
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+            width: 400,
+            height: "50vh",
+            bgcolor: "background.paper",
+            border: "2px solid #000",
+            boxShadow: 24,
+            p: 4,
+          }}
+        >
+          <form
+            style={{
+              width: "80%",
+              display: "flex",
+              flexDirection: "column",
+              gap: "10px",
+              margin: "20px",
+              alignItems: "center",
+              height: "80vh",
+            }}
+            onSubmit={handleSubmit(validationUpdate)}
+          >
+            <Typography>{userSelected.name}</Typography>
+            <Typography>Update User</Typography>
+            <TextField
+              variant="outlined"
+              defaultValue={userSelected.name}
+              type="text"
+              {...register("name", { required: true })}
+            />
+            <TextField
+              variant="outlined"
+              defaultValue={userSelected.lastName}
+              error={errors.lastName ? true : false}
+              type="text"
+              {...register("lastName", { required: true })}
+            />
+            <TextField
+              variant="outlined"
+              defaultValue={userSelected.gender}
+              type="text"
+              {...register("gender", { required: true })}
+            />
+            <div
+              style={{
+                flexDirection: "row",
+                gap: "20px",
+                justifyContent: "space-evenly",
+                display: "flex",
+              }}
+            >
+              <Button type="submit" variant="contained">
+                Save
+              </Button>
+              <Button variant="contained" onClick={() => handleClose()}>
+                Cancel
+              </Button>
+            </div>
+          </form>
+        </Box>
+      </Modal> */}
     </div>
-    // <div className="container">
-    //   <Head>
-    //     <title>Create Next App</title>
-    //     <link rel="icon" href="/favicon.ico" />
-    //   </Head>
-
-    //   <main>
-    //     <h1 className="title">
-    //       Welcome to <a href="#">Next.js!</a>
-    //     </h1>
-
-    //     <p className="description">
-    //       Get started by editing <code>pages/index.js</code>
-    //     </p>
-
-    //     <div className="grid">
-    //       <Link href="/about">
-    //       <a className="card">
-    //         <h3>About &rarr;</h3>
-    //       </a>
-    //       </Link>
-
-    //       <Link href="/contact">
-    //       <a className="card">
-    //         <h3>Contact &rarr;</h3>
-    //       </a>
-    //       </Link>
-    //     </div>
-    //   </main>
-
-    //   <footer>
-    //     <a
-    //       href="https://vercel.com?utm_source=create-next-app&utm_medium=default-template&utm_campaign=create-next-app"
-    //       target="_blank"
-    //       rel="noopener noreferrer"
-    //     >
-    //       Powered by{' '}
-    //       <img src="/vercel.svg" alt="Vercel" className="logo" />
-    //     </a>
-    //   </footer>
-
-    //   <style jsx>{`
-    //     .container {
-    //       min-height: 100vh;
-    //       padding: 0 0.5rem;
-    //       display: flex;
-    //       flex-direction: column;
-    //       justify-content: center;
-    //       align-items: center;
-    //     }
-
-    //     main {
-    //       padding: 5rem 0;
-    //       flex: 1;
-    //       display: flex;
-    //       flex-direction: column;
-    //       justify-content: center;
-    //       align-items: center;
-    //     }
-
-    //     footer {
-    //       width: 100%;
-    //       height: 100px;
-    //       border-top: 1px solid #eaeaea;
-    //       display: flex;
-    //       justify-content: center;
-    //       align-items: center;
-    //     }
-
-    //     footer img {
-    //       margin-left: 0.5rem;
-    //     }
-
-    //     footer a {
-    //       display: flex;
-    //       justify-content: center;
-    //       align-items: center;
-    //     }
-
-    //     a {
-    //       color: inherit;
-    //       text-decoration: none;
-    //     }
-
-    //     .title a {
-    //       color: #0070f3;
-    //       text-decoration: none;
-    //     }
-
-    //     .title a:hover,
-    //     .title a:focus,
-    //     .title a:active {
-    //       text-decoration: underline;
-    //     }
-
-    //     .title {
-    //       margin: 0;
-    //       line-height: 1.15;
-    //       font-size: 4rem;
-    //     }
-
-    //     .title,
-    //     .description {
-    //       text-align: center;
-    //     }
-
-    //     .description {
-    //       line-height: 1.5;
-    //       font-size: 1.5rem;
-    //     }
-
-    //     code {
-    //       background: #fafafa;
-    //       border-radius: 5px;
-    //       padding: 0.75rem;
-    //       font-size: 1.1rem;
-    //       font-family: Menlo, Monaco, Lucida Console, Liberation Mono,
-    //         DejaVu Sans Mono, Bitstream Vera Sans Mono, Courier New, monospace;
-    //     }
-
-    //     .grid {
-    //       display: flex;
-    //       align-items: center;
-    //       justify-content: center;
-    //       flex-wrap: wrap;
-
-    //       max-width: 800px;
-    //       margin-top: 3rem;
-    //     }
-
-    //     .card {
-    //       margin: 1rem;
-    //       flex-basis: 45%;
-    //       padding: 1.5rem;
-    //       text-align: left;
-    //       color: inherit;
-    //       text-decoration: none;
-    //       border: 1px solid #eaeaea;
-    //       border-radius: 10px;
-    //       transition: color 0.15s ease, border-color 0.15s ease;
-    //     }
-
-    //     .card:hover,
-    //     .card:focus,
-    //     .card:active {
-    //       color: #0070f3;
-    //       border-color: #0070f3;
-    //     }
-
-    //     .card h3 {
-    //       margin: 0 0 1rem 0;
-    //       font-size: 1.5rem;
-    //     }
-
-    //     .card p {
-    //       margin: 0;
-    //       font-size: 1.25rem;
-    //       line-height: 1.5;
-    //     }
-
-    //     .logo {
-    //       height: 1em;
-    //     }
-
-    //     @media (max-width: 600px) {
-    //       .grid {
-    //         width: 100%;
-    //         flex-direction: column;
-    //       }
-    //     }
-    //   `}</style>
-
-    //   <style jsx global>{`
-    //     html,
-    //     body {
-    //       padding: 0;
-    //       margin: 0;
-    //       font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto,
-    //         Oxygen, Ubuntu, Cantarell, Fira Sans, Droid Sans, Helvetica Neue,
-    //         sans-serif;
-    //     }
-
-    //     * {
-    //       box-sizing: border-box;
-    //     }
-    //   `}</style>
-    // </div>
   );
 }
